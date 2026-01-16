@@ -1,0 +1,10 @@
+{
+  "name": "MainDID3杉丸君EVAアシスタント",
+  "description": "An AI assistant from 'Refa-sta' to evaluate your used luxury goods, inspired by kinkaimasu.jp.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "display-capture"
+  ],
+  "prompt": ""
+}

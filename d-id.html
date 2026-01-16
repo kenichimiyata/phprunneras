@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D-ID ライブストリーム - 本番環境</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            box-sizing: border-box;
+        }
+        h1 {
+            color: #1c1e21;
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+        .subtitle {
+            text-align: center;
+            color: #606770;
+            margin-bottom: 2rem;
+        }
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            margin: 0 auto 1.5rem;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            background: #000;
+        }
+        #avatarVideo {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .status-bar {
+            background: #f7f7f8;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e0e0e0;
+        }
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-weight: 500;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: #e57373; /* Red for disconnected */
+            transition: background-color 0.3s;
+        }
+        .status-dot.connected {
+            background-color: #81c784; /* Green for connected */
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(129, 199, 132, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(129, 199, 132, 0); }
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        .btn-connect {
+            background-color: #42b72a;
+            color: white;
+        }
+        .btn-connect:hover:not(:disabled) {
+            background-color: #36a420;
+        }
+        .btn-disconnect {
+            background-color: #fa383e;
+            color: white;
+        }
+        .btn-disconnect:hover:not(:disabled) {
+            background-color: #e32b31;
+        }
+        .btn-speak, .btn-chat {
+            background-color: #1877f2;
+            color: white;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .btn-speak:hover:not(:disabled), .btn-chat:hover:not(:disabled) {
+            background-color: #166fe5;
+        }
+        button:disabled {
+            background-color: #e4e6eb;
+            color: #bcc0c4;
+            cursor: not-allowed;
+        }
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: #333;
+        }
+        textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ccd0d5;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-sizing: border-box;
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #1877f2;
+            box-shadow: 0 0 0 2px rgba(24, 119, 242, 0.2);
+        }
+        .chat-messages {
+            background: #f0f2f5;
+            border-radius: 12px;
+            padding: 1rem;
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .message {
+            padding: 0.75rem 1rem;
+            border-radius: 18px;
+            max-width: 75%;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.user {
+            background: #0084ff;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .message.assistant {
+            background: #e4e6eb;
+            color: #050505;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .info-box, .env-info {
+            border-left: 4px solid;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1.5rem;
+        }
+        .info-box {
+            background: #E8F5E9;
+            border-color: #4CAF50;
+        }
+        .info-box h3 {
+            margin-top: 0;
+            color: #2E7D32;
+        }
+        .env-info {
+            background: #fff3e0;
+            border-color: #ff9800;
+        }
+        .env-info code {
+            background: #ffe0b2;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        .quick-messages {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .quick-msg-btn {
+            padding: 0.5rem 1rem;
+            font-size: 0.875rem;
+            background: #e7f3ff;
+            color: #1877f2;
+            border: 1px solid transparent;
+        }
+        .quick-msg-btn:hover:not(:disabled) {
+            background: #d0e7ff;
+            border-color: #1877f2;
+        }
+        h3 {
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 1rem;
+            }
+            .container {
+                padding: 1.5rem;
+            }
+            .controls {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 D-ID ライブストリーム</h1>
+        <p class="subtitle">デバッグ用ページ - リアルタイムAIアバター会話システム</p>
+
+        <div class="env-info">
+            <h3>🌐 環境情報 & デバッグ</h3>
+            <p><strong>Agent ID:</strong> <code>v2_agt_Pl1xZg3T</code></p>
+            <p style="margin-bottom: 0;"><strong>ヒント:</strong> 「Failed to fetch」エラーが出る場合、D-IDのプロジェクト設定で **許可されたドメイン** に現在アクセスしているドメイン (例: <code>http://localhost:5173</code> やデプロイ先のURL) が含まれているか確認してください。</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">未接続</span>
+            </div>
+            <span id="connectionInfo"></span>
+        </div>
+
+        <div class="video-container">
+            <video id="avatarVideo" autoplay playsinline muted></video>
+        </div>
+
+        <div class="controls">
+            <button class="btn-connect" id="connectBtn" onclick="connectAgent()">🔌 接続開始</button>
+            <button class="btn-disconnect" id="disconnectBtn" onclick="disconnectAgent()" disabled>🔌 切断</button>
+        </div>
+
+        <h3>💬 クイックメッセージ（チャット）</h3>
+        <div class="quick-messages">
+            <button class="quick-msg-btn" onclick="quickChat('こんにちは！')" id="quick1" disabled>👋 こんにちは</button>
+            <button class="quick-msg-btn" onclick="quickChat('今日の天気は？')" id="quick2" disabled>🌤️ 天気</button>
+            <button class="quick-msg-btn" onclick="quickChat('あなたは誰ですか？')" id="quick3" disabled>❓ 自己紹介</button>
+            <button class="quick-msg-btn" onclick="quickChat('面白い話をして')" id="quick4" disabled>😄 面白い話</button>
+        </div>
+
+        <div class="input-group">
+            <label for="speakText">📝 テキストで話させる（Speak）:</label>
+            <textarea id="speakText" placeholder="例：こんにちは！元気ですか？今日はいい天気ですね。"></textarea>
+            <button class="btn-speak" onclick="speakText()" id="speakBtn" disabled>🗣️ このテキストを読み上げ</button>
+        </div>
+
+        <div class="input-group">
+            <label for="chatText">💭 AIチャット（LLMと会話）:</label>
+            <textarea id="chatText" placeholder="例：月までの距離は？ / AIについて教えて / おすすめの本は？"></textarea>
+            <button class="btn-chat" onclick="chatWithAgent()" id="chatBtn" disabled>💬 AIに質問する</button>
+        </div>
+
+        <h3>📜 チャット履歴</h3>
+        <div class="chat-messages" id="chatMessages">
+            <p style="text-align: center; color: #999;">チャット履歴はここに表示されます</p>
+        </div>
+    </div>
+
+    <!-- D-ID SDK -->
+    <script type="module">
+        import * as sdk from 'https://cdn.jsdelivr.net/npm/@d-id/client-sdk@latest/dist/index.js';
+
+        // --- 設定 (重要) ---
+        // このHTMLファイルは、D-ID接続のデバッグ専用です。
+        // Home.tsx と同じ Agent ID と Client Key を設定してください。
+        const AGENT_ID = 'v2_agt_XXjx_Lct'; // Home.tsx と同じIDを設定
+        
+        // ！！！重要！！！
+        // 以下の 'YOUR_D-ID_API_KEY' を、ご自身の有効なD-ID Client API Keyに置き換えてください。
+        // "Failed to fetch" エラーの主な原因は、キーが無効であるか、
+        // このページをホストしているドメイン (例: http://localhost:5173) が
+        // D-IDプロジェクト設定で「許可されたドメイン」として登録されていないことです。
+        const CLIENT_KEY = 'Z29vZ2xlLW9hdXRoMnwxMDkwMTUzMTg3Njc3NTE5NzI5MTY6MXhjSFptOXM5NjF3WmYtUVVrRk1Q';
+
+        let agentManager = null;
+        let srcObject = null;
+        const videoElement = document.getElementById('avatarVideo');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const connectionInfo = document.getElementById('connectionInfo');
+        const chatMessages = document.getElementById('chatMessages');
+
+        // グローバルスコープに公開
+        window.agentManager = null;
+
+        window.connectAgent = async function() {
+            if (CLIENT_KEY === 'YOUR_D-ID_API_KEY') {
+                alert('D-ID Client Keyが設定されていません。d-id.htmlファイル内のCLIENT_KEYを有効なキーに置き換えてください。');
+                return;
+            }
+
+            try {
+                statusText.textContent = '接続中...';
+                document.getElementById('connectBtn').disabled = true;
+
+                const auth = { 
+                    type: 'key', 
+                    clientKey: CLIENT_KEY
+                };
+
+                const callbacks = {
+                    onSrcObjectReady(value) {
+                        console.log('✅ onSrcObjectReady:', value);
+                        videoElement.srcObject = value;
+                        videoElement.muted = false; // 音声を有効化
+                        srcObject = value;
+                        return srcObject;
+                    },
+                    onVideoStateChange(state) {
+                        console.log('📹 onVideoStateChange:', state);
+                        if (state === "STOP") {
+                            videoElement.srcObject = undefined;
+                            if (window.agentManager?.agent?.presenter?.idle_video) {
+                                videoElement.src = window.agentManager.agent.presenter.idle_video;
+                            }
+                        } else {
+                            videoElement.src = "";
+                            videoElement.srcObject = srcObject;
+                        }
+                    },
+                    onConnectionStateChange(state) {
+                        console.log('🔌 onConnectionStateChange:', state);
+                        statusText.textContent = state;
+                        
+                        if (state === 'connected') {
+                            statusDot.classList.add('connected');
+                            statusText.textContent = '✅ 接続済み';
+                            connectionInfo.textContent = 'オンライン';
+                            enableButtons(true);
+                        } else if (state === 'disconnected' || state === 'closed') {
+                            statusDot.classList.remove('connected');
+                            statusText.textContent = '未接続';
+                            connectionInfo.textContent = '';
+                            enableButtons(false);
+                            document.getElementById('connectBtn').disabled = false;
+                        } else if (state === 'connecting') {
+                            statusText.textContent = '⏳ 接続中...';
+                        }
+                    },
+                    onNewMessage(messages, type) {
+                        console.log('💬 onNewMessage:', messages, type);
+                        
+                        // 最初のメッセージの場合、プレースホルダーをクリア
+                        if (chatMessages.querySelector('p')) {
+                            chatMessages.innerHTML = '';
+                        }
+                        
+                        messages.forEach(msg => {
+                            const msgDiv = document.createElement('div');
+                            msgDiv.className = `message ${msg.role}`;
+                            const icon = msg.role === 'user' ? '👤' : '🤖';
+                            const role = msg.role === 'user' ? 'あなた' : 'AI';
+                            msgDiv.innerHTML = `<strong>${icon} ${role}:</strong><br>${msg.content}`;
+                            chatMessages.appendChild(msgDiv);
+                        });
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    },
+                    onError(error, errorData) {
+                        console.error('❌ Error:', error, errorData);
+                        alert(`エラーが発生しました: ${error.message || error}\n\n詳細: ${JSON.stringify(errorData)}`);
+                        statusText.textContent = '❌ エラー';
+                        statusDot.classList.remove('connected');
+                        document.getElementById('connectBtn').disabled = false;
+                        enableButtons(false);
+                    }
+                };
+
+                const streamOptions = { 
+                    compatibilityMode: "auto", 
+                    streamWarmup: true
+                };
+
+                console.log('🚀 Agent Manager作成中...');
+                console.log('Agent ID:', AGENT_ID);
+                
+                agentManager = await sdk.createAgentManager(AGENT_ID, { 
+                    auth, 
+                    callbacks, 
+                    streamOptions 
+                });
+
+                window.agentManager = agentManager;
+
+                console.log('📊 Agent情報:', agentManager.agent);
+                console.log('💡 Starter Messages:', agentManager.starterMessages);
+
+                console.log('🔗 接続開始...');
+                await agentManager.connect();
+
+                console.log('✅ 接続成功！');
+
+            } catch (error) {
+                console.error('❌ 接続エラー:', error);
+                alert(`接続に失敗しました: ${error.message}\n\n考えられる原因:\n1. 許可ドメインに現在のオリジンを追加していない\n2. Client KeyまたはAgent IDが間違っている\n3. ネットワーク接続の問題`);
+                statusText.textContent = '❌ 接続失敗';
+                statusDot.classList.remove('connected');
+                document.getElementById('connectBtn').disabled = false;
+            }
+        };
+
+        window.disconnectAgent = async function() {
+            if (agentManager) {
+                try {
+                    await agentManager.disconnect();
+                    agentManager = null;
+                    window.agentManager = null;
+                    videoElement.srcObject = null;
+                    videoElement.src = "";
+                    console.log('✅ 切断しました');
+                } catch (error) {
+                    console.error('切断エラー:', error);
+                }
+            }
+        };
+
+        window.speakText = async function() {
+            const text = document.getElementById('speakText').value.trim();
+            if (!text) {
+                alert('テキストを入力してください');
+                return;
+            }
+
+            if (!agentManager) {
+                alert('まず「接続」ボタンをクリックしてください');
+                return;
+            }
+
+            try {
+                console.log('🗣️ Speak:', text);
+                await agentManager.speak({
+                    type: "text",
+                    input: text
+                });
+                console.log('✅ テキスト送信完了');
+            } catch (error) {
+                console.error('❌ Speak エラー:', error);
+                alert(`エラー: ${error.message}`);
+            }
+        };
+
+        window.chatWithAgent = async function() {
+            const text = document.getElementById('chatText').value.trim();
+            if (!text) {
+                alert('メッセージを入力してください');
+                return;
+            }
+
+            if (!agentManager) {
+                alert('まず「接続」ボタンをクリックしてください');
+                return;
+            }
+
+            try {
+                console.log('💬 Chat:', text);
+                await agentManager.chat(text);
+                console.log('✅ チャット送信完了');
+                document.getElementById('chatText').value = '';
+            } catch (error) {
+                console.error('❌ Chat エラー:', error);
+                alert(`エラー: ${error.message}`);
+            }
+        };
+
+        window.quickChat = function(message) {
+            document.getElementById('chatText').value = message;
+            chatWithAgent();
+        };
+
+        function enableButtons(enabled) {
+            document.getElementById('disconnectBtn').disabled = !enabled;
+            document.getElementById('speakBtn').disabled = !enabled;
+            document.getElementById('chatBtn').disabled = !enabled;
+            document.getElementById('quick1').disabled = !enabled;
+            document.getElementById('quick2').disabled = !enabled;
+            document.getElementById('quick3').disabled = !enabled;
+            document.getElementById('quick4').disabled = !enabled;
+        }
+
+        // ページロード時のログ
+        console.log('🎯 D-ID ライブストリーム（デバッグ用ページ）準備完了');
+        console.log('Agent ID:', AGENT_ID);
+        console.log('Client Key:', CLIENT_KEY.substring(0, 10) + '...');
+    </script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f7f7f8;
+}
+
+.hidden {
+  display: none;
+}
+
+/* Styles for react-markdown content */
+.markdown-content {
+  line-height: 1.6;
+  color: inherit;
+}
+.markdown-content > *:first-child {
+  margin-top: 0;
+}
+.markdown-content > *:last-child {
+  margin-bottom: 0;
+}
+.markdown-content p {
+  margin-bottom: 12px;
+}
+.markdown-content a {
+  color: #c5a05b; /* brand-gold */
+  text-decoration: underline;
+}
+.markdown-content a:hover {
+  text-decoration: none;
+}
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: 24px;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+.markdown-content li {
+  margin-bottom: 4px;
+}
+.markdown-content strong,
+.markdown-content b {
+  font-weight: bold;
+}
+.markdown-content code {
+  background-color: rgba(0,0,0,0.08);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+}
+.markdown-content pre {
+  background-color: #2d2d2d;
+  color: #f1f1f1;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+.markdown-content pre code {
+  background-color: transparent;
+  padding: 0;
+}
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4 {
+  font-weight: bold;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  line-height: 1.2;
+}
+.markdown-content h1 { font-size: 1.5em; }
+.markdown-content h2 { font-size: 1.25em; }
+.markdown-content h3 { font-size: 1.1em; }

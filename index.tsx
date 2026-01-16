@@ -1,0 +1,6 @@
+
+import ReactDOM from 'react-dom/client';
+import Home from './Home.tsx';
+
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+root.render(<Home />);

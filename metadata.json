@@ -1,0 +1,7 @@
+{
+  "description": "A professional AI Headshot Photographer app that transforms casual selfies into high-end corporate portraits.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "name": "EVAProShot AI"
+}
